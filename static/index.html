@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Expense Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+  :root {
+    --bg: #0c0e16;
+    --surface: #13151f;
+    --card: #191c28;
+    --card2: #1e2130;
+    --border: #252838;
+    --accent: #7c6fff;
+    --accent-glow: rgba(124,111,255,0.18);
+    --green: #34d399;
+    --green-glow: rgba(52,211,153,0.13);
+    --red: #f87171;
+    --red-glow: rgba(248,113,113,0.13);
+    --text: #f1f5f9;
+    --text2: #94a3b8;
+    --muted: #4b5563;
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh; -webkit-font-smoothing: antialiased;
+  }
+
+  /* ======= AUTH ======= */
+  #auth-screen {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 20px;
+    background: radial-gradient(ellipse at 55% 15%, rgba(124,111,255,0.1) 0%, transparent 55%);
+  }
+  .auth-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; padding: 44px 40px; width: 100%; max-width: 440px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+  }
+  .auth-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .auth-brand-icon {
+    width: 38px; height: 38px; border-radius: 10px;
+    background: linear-gradient(135deg,#7c6fff,#a78bfa);
+    display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
+  }
+  .auth-brand h1 { font-size: 1.45rem; font-weight: 700; letter-spacing: -0.4px; }
+  .auth-sub { color: var(--text2); font-size: 0.875rem; margin-bottom: 32px; }
+
+  .tabs { display: flex; gap: 3px; margin-bottom: 28px; background: var(--card); border-radius: 10px; padding: 4px; border: 1px solid var(--border); }
+  .tab { flex: 1; padding: 9px; border: none; background: none; color: var(--text2); cursor: pointer; border-radius: 7px; font-size: 0.88rem; font-weight: 500; transition: all .18s; font-family: inherit; }
+  .tab.active { background: var(--accent); color: #fff; font-weight: 600; }
+
+  .form-group { margin-bottom: 17px; }
+  .form-group label { display: block; font-size: 0.77rem; font-weight: 600; color: var(--text2); margin-bottom: 7px; letter-spacing: 0.2px; }
+  .form-group input, .form-group select {
+    width: 100%; padding: 11px 14px; background: var(--card);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text); font-size: 0.93rem; font-family: inherit;
+    transition: border-color .18s, box-shadow .18s; outline: none;
+  }
+  .form-group input::placeholder { color: var(--muted); }
+  .form-group input:focus, .form-group select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+  .form-group select option { background: var(--card2); }
+
+  .btn { width: 100%; padding: 12px; border: none; border-radius: var(--radius-sm); font-size: 0.95rem; cursor: pointer; transition: all .18s; font-weight: 600; font-family: inherit; }
+  .btn-primary { background: linear-gradient(135deg,#7c6fff,#9b8aff); color:#fff; box-shadow: 0 4px 14px rgba(124,111,255,0.35); }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(124,111,255,0.45); }
+  .btn-primary:disabled { opacity: .65; transform: none; cursor: not-allowed; }
+
+  .error-msg { color:var(--red); font-size:0.84rem; margin-top:14px; display:none; background:var(--red-glow); border:1px solid rgba(248,113,113,0.28); border-radius:var(--radius-sm); padding:10px 14px; text-align:center; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(-5px); } to { opacity:1; transform:translateY(0); } }
+
+  /* ======= APP SHELL ======= */
+  #app-screen { display: none; }
+
+  .topbar {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 0 28px; display: flex; align-items: center; justify-content: space-between;
+    height: 58px; position: sticky; top: 0; z-index: 100;
+  }
+  .topbar-brand { display: flex; align-items: center; gap: 9px; }
+  .brand-icon { width: 30px; height: 30px; border-radius: 7px; background: linear-gradient(135deg,#7c6fff,#a78bfa); display: flex; align-items: center; justify-content: center; font-size: 0.95rem; }
+  .brand-name { font-size: 0.98rem; font-weight: 700; letter-spacing: -0.3px; }
+  .brand-name span { color: var(--accent); }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .user-chip { display: flex; align-items: center; gap: 7px; background: var(--card); border: 1px solid var(--border); padding: 5px 12px 5px 7px; border-radius: 99px; }
+  .user-avatar { width: 23px; height: 23px; border-radius: 50%; background: linear-gradient(135deg,#7c6fff,#34d399); display: flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 700; color: #fff; }
+  .user-name { font-size: 0.82rem; font-weight: 500; color: var(--text2); }
+  .logout-btn { background: transparent; border: 1px solid var(--border); color: var(--text2); padding: 6px 14px; border-radius: 7px; cursor: pointer; font-size: 0.82rem; font-weight: 500; transition: all .18s; font-family: inherit; }
+  .logout-btn:hover { border-color: rgba(248,113,113,0.5); color: var(--red); background: var(--red-glow); }
+
+  .nav { background: var(--surface); border-bottom: 1px solid var(--border); display: flex; padding: 0 20px; overflow-x: auto; }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav-btn { padding: 14px 18px; border: none; background: none; color: var(--text2); cursor: pointer; font-size: 0.875rem; font-weight: 500; border-bottom: 2px solid transparent; transition: all .18s; white-space: nowrap; font-family: inherit; display: flex; align-items: center; gap: 6px; }
+  .nav-btn:hover { color: var(--text); }
+  .nav-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+  .main { padding: 28px 24px; max-width: 980px; margin: 0 auto; }
+  .page { display: none; }
+  .page.active { display: block; animation: fadeUp .2s ease; }
+
+  /* Page header */
+  .page-header { margin-bottom: 22px; }
+  .page-header h2 { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.3px; }
+  .page-header p { font-size: 0.84rem; color: var(--text2); margin-top: 3px; }
+
+  /* Stat grid */
+  .stat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 22px; }
+  @media(max-width:580px){ .stat-grid { grid-template-columns: 1fr; } }
+  .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; display: flex; align-items: center; gap: 14px; transition: border-color .18s; }
+  .stat-card:hover { border-color: #303450; }
+  .stat-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.05rem; flex-shrink: 0; }
+  .stat-icon.g { background: var(--green-glow); }
+  .stat-icon.r { background: var(--red-glow); }
+  .stat-icon.p { background: var(--accent-glow); }
+  .stat-body { min-width: 0; }
+  .stat-label { font-size: 0.73rem; font-weight: 600; color: var(--text2); margin-bottom: 4px; letter-spacing: 0.3px; text-transform: uppercase; }
+  .stat-val { font-size: 1.45rem; font-weight: 700; letter-spacing: -0.5px; line-height: 1.1; }
+  .stat-val.g { color: var(--green); }
+  .stat-val.r { color: var(--red); }
+  .stat-val.p { color: var(--accent); }
+
+  /* Dashboard layout */
+  .dash-grid { display: grid; grid-template-columns: 320px 1fr; gap: 18px; }
+  @media(max-width:720px){ .dash-grid { grid-template-columns: 1fr; } }
+
+  .chart-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; }
+  .card-title { font-size: 0.9rem; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+  .card-sub { font-size: 0.77rem; color: var(--text2); margin-bottom: 18px; }
+
+  /* Pie legend */
+  .pie-wrap { position: relative; }
+  .pie-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; pointer-events: none; }
+  .pie-center-val { font-size: 1.1rem; font-weight: 700; }
+  .pie-center-lbl { font-size: 0.7rem; color: var(--text2); margin-top: 1px; }
+  .pie-legend { display: flex; flex-direction: column; gap: 9px; margin-top: 18px; }
+  .pie-legend-row { display: flex; align-items: center; justify-content: space-between; }
+  .pie-legend-left { display: flex; align-items: center; gap: 8px; }
+  .pie-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .pie-lbl { font-size: 0.82rem; color: var(--text2); }
+  .pie-val { font-size: 0.82rem; font-weight: 600; }
+
+  /* Category bars */
+  .cat-list { display: flex; flex-direction: column; gap: 11px; }
+  .cat-row { display: grid; grid-template-columns: 100px 1fr 70px; align-items: center; gap: 10px; }
+  .cat-name { font-size: 0.82rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cat-bar-bg { height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; }
+  .cat-bar-fill { height: 100%; border-radius: 99px; transition: width .4s ease; }
+  .cat-amt { font-size: 0.78rem; font-weight: 600; color: var(--text2); text-align: right; }
+
+  /* Filter row */
+  .filter-row { display: flex; gap: 8px; align-items: center; margin-bottom: 18px; flex-wrap: wrap; }
+  .filter-row label { font-size: 0.8rem; font-weight: 600; color: var(--text2); }
+  .filter-row select, .filter-row input[type=number] { padding: 8px 11px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 0.87rem; font-family: inherit; outline: none; transition: border-color .18s; }
+  .filter-row select:focus, .filter-row input[type=number]:focus { border-color: var(--accent); }
+  .filter-btn { padding: 8px 18px; background: var(--accent); border: none; border-radius: var(--radius-sm); color: #fff; cursor: pointer; font-size: 0.87rem; font-weight: 600; font-family: inherit; transition: background .18s; }
+  .filter-btn:hover { background: #6b5eee; }
+
+  /* Form card */
+  .form-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px 24px; margin-bottom: 22px; }
+  .form-card-title { font-size: 0.97rem; font-weight: 700; margin-bottom: 18px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media(max-width:480px){ .form-row { grid-template-columns: 1fr; } }
+  .add-btn { padding: 10px 22px; background: linear-gradient(135deg,#7c6fff,#9b8aff); border: none; border-radius: var(--radius-sm); color: #fff; cursor: pointer; font-size: 0.88rem; font-weight: 600; font-family: inherit; transition: all .18s; box-shadow: 0 3px 10px rgba(124,111,255,0.28); margin-top: 4px; }
+  .add-btn:hover { transform: translateY(-1px); box-shadow: 0 5px 16px rgba(124,111,255,0.4); }
+
+  /* Table */
+  .section-lbl { font-size: 0.8rem; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 10px; }
+  .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .table-wrap table { width: 100%; border-collapse: collapse; }
+  .table-wrap th { background: var(--card2); padding: 10px 16px; text-align: left; font-size: 0.72rem; font-weight: 600; color: var(--text2); letter-spacing: 0.5px; text-transform: uppercase; }
+  .table-wrap td { padding: 11px 16px; border-top: 1px solid var(--border); font-size: 0.875rem; vertical-align: middle; }
+  .table-wrap tr:hover td { background: rgba(255,255,255,0.014); }
+
+  .badge { display: inline-block; padding: 3px 9px; border-radius: 99px; font-size: 0.72rem; font-weight: 600; }
+  .badge-g { background: var(--green-glow); color: var(--green); }
+  .badge-r { background: var(--red-glow); color: var(--red); }
+  .badge-p { background: var(--accent-glow); color: var(--accent); }
+
+  .del-btn { background: transparent; color: var(--muted); border: 1px solid var(--border); padding: 4px 11px; border-radius: 6px; cursor: pointer; font-size: 0.78rem; font-family: inherit; transition: all .18s; }
+  .del-btn:hover { background: var(--red-glow); border-color: rgba(248,113,113,0.35); color: var(--red); }
+
+  .empty-cell { text-align: center; padding: 44px 20px; }
+  .empty-icon { font-size: 1.8rem; opacity: 0.4; margin-bottom: 8px; }
+  .empty-text { font-size: 0.85rem; color: var(--text2); }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 22px; right: 22px; background: var(--card2); border: 1px solid var(--border); border-radius: 10px; padding: 11px 18px; font-size: 0.875rem; font-weight: 500; z-index: 9999; opacity: 0; transform: translateY(8px); transition: all .22s; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.success { border-color: rgba(52,211,153,.4); color: var(--green); }
+  .toast.error { border-color: rgba(248,113,113,.4); color: var(--red); }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+</style>
+</head>
+<body>
+
+<!-- ===== AUTH ===== -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-brand">
+      <div class="auth-brand-icon">💰</div>
+      <h1>Expense Tracker</h1>
+    </div>
+    <p class="auth-sub">Track your finances, privately and securely.</p>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('login')">Sign In</button>
+      <button class="tab" onclick="switchTab('register')">Create Account</button>
+    </div>
+
+    <div id="login-form">
+      <div class="form-group">
+        <label>Username</label>
+        <input id="l-user" type="text" placeholder="Enter your username" autocomplete="username"/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input id="l-pass" type="password" placeholder="Enter your password" autocomplete="current-password"
+               onkeydown="if(event.key==='Enter')doLogin()"/>
+      </div>
+      <button class="btn btn-primary" id="login-btn" onclick="doLogin()">Sign In</button>
+      <div id="login-err" class="error-msg"></div>
+    </div>
+
+    <div id="register-form" style="display:none">
+      <div class="form-row">
+        <div class="form-group"><label>Username</label><input id="r-user" type="text" placeholder="Choose a username"/></div>
+        <div class="form-group"><label>Password</label><input id="r-pass" type="password" placeholder="Choose a password"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Date of Birth</label><input id="r-dob" type="date"/></div>
+        <div class="form-group"><label>Financial Start Date</label><input id="r-start" type="date"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Opening Balance (₹)</label><input id="r-bal" type="number" min="0" step="0.01" placeholder="0.00"/></div>
+        <div class="form-group"><label>Note (Optional)</label><input id="r-note" type="text" placeholder="e.g. Personal account"/></div>
+      </div>
+      <button class="btn btn-primary" onclick="doRegister()">Create Account</button>
+      <div id="reg-err" class="error-msg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== APP ===== -->
+<div id="app-screen">
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div class="brand-icon">💰</div>
+      <div class="brand-name">Expense <span>Tracker</span></div>
+    </div>
+    <div class="topbar-right">
+      <div class="user-chip">
+        <div class="user-avatar" id="user-av">R</div>
+        <div class="user-name" id="user-lbl">User</div>
+      </div>
+      <button class="logout-btn" onclick="doLogout()">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="nav">
+    <button class="nav-btn active" onclick="showPage('dashboard')">📊 Dashboard</button>
+    <button class="nav-btn" onclick="showPage('expenses')">💸 Expenses</button>
+    <button class="nav-btn" onclick="showPage('income')">💵 Income</button>
+    <button class="nav-btn" onclick="showPage('history')">📋 History</button>
+  </div>
+
+  <div class="main">
+
+    <!-- DASHBOARD -->
+    <div id="page-dashboard" class="page active">
+      <div class="page-header">
+        <h2>Dashboard</h2>
+        <p>Your financial overview at a glance</p>
+      </div>
+
+      <div class="filter-row">
+        <label>Period</label>
+        <select id="dash-month">
+          <option value="01">January</option><option value="02">February</option>
+          <option value="03">March</option><option value="04">April</option>
+          <option value="05">May</option><option value="06">June</option>
+          <option value="07">July</option><option value="08">August</option>
+          <option value="09">September</option><option value="10">October</option>
+          <option value="11">November</option><option value="12">December</option>
+        </select>
+        <input id="dash-year" type="number" value="2025" style="width:86px"/>
+        <button class="filter-btn" onclick="loadDashboard()">Apply</button>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-icon g">💵</div>
+          <div class="stat-body">
+            <div class="stat-label">Total Income</div>
+            <div class="stat-val g" id="d-income">₹0.00</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon r">💸</div>
+          <div class="stat-body">
+            <div class="stat-label">Total Expenses</div>
+            <div class="stat-val r" id="d-expense">₹0.00</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon p">💰</div>
+          <div class="stat-body">
+            <div class="stat-label">Current Balance</div>
+            <div class="stat-val p" id="d-balance">₹0.00</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dash-grid">
+        <div class="chart-card">
+          <div class="card-title">Income vs Expenses</div>
+          <div class="card-sub">Breakdown for selected period</div>
+          <div class="pie-wrap">
+            <canvas id="pie-chart" height="220"></canvas>
+            <div class="pie-center" id="pie-center">
+              <div class="pie-center-val" id="pie-pct">—</div>
+              <div class="pie-center-lbl">Saved</div>
+            </div>
+          </div>
+          <div class="pie-legend" id="pie-legend"></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="card-title">Spending by Category</div>
+          <div class="card-sub">Where your money is going this period</div>
+          <div class="cat-list" id="cat-list">
+            <div class="empty-text" style="padding:12px 0">No expense data yet.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXPENSES -->
+    <div id="page-expenses" class="page">
+      <div class="page-header">
+        <h2>Expenses</h2>
+        <p>Log and review your spending</p>
+      </div>
+
+      <div class="form-card">
+        <div class="form-card-title">Add New Expense</div>
+        <div class="form-row">
+          <div class="form-group"><label>Amount (₹)</label><input id="e-amount" type="number" min="0.01" step="0.01" placeholder="0.00"/></div>
+          <div class="form-group"><label>Category</label>
+            <select id="e-cat">
+              <option value="food">Food &amp; Dining</option>
+              <option value="transport">Transport</option>
+              <option value="rent">Rent</option>
+              <option value="utilities">Utilities</option>
+              <option value="shopping">Shopping</option>
+              <option value="entertainment">Entertainment</option>
+              <option value="health">Health</option>
+              <option value="education">Education</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Date</label><input id="e-date" type="date"/></div>
+          <div class="form-group"><label>Note (Optional)</label><input id="e-note" type="text" placeholder="What was this for?"/></div>
+        </div>
+        <button class="add-btn" onclick="addExpense()">Add Expense</button>
+      </div>
+
+      <div class="filter-row">
+        <label>Filter by</label>
+        <select id="exp-month">
+          <option value="01">January</option><option value="02">February</option>
+          <option value="03">March</option><option value="04">April</option>
+          <option value="05">May</option><option value="06">June</option>
+          <option value="07">July</option><option value="08">August</option>
+          <option value="09">September</option><option value="10">October</option>
+          <option value="11">November</option><option value="12">December</option>
+        </select>
+        <input id="exp-year" type="number" value="2025" style="width:86px"/>
+        <button class="filter-btn" onclick="loadExpenses()">Filter</button>
+      </div>
+
+      <div class="section-lbl">Expense Records</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Amount</th><th>Category</th><th>Note</th><th></th></tr></thead>
+          <tbody id="exp-tbody">
+            <tr><td colspan="5"><div class="empty-cell"><div class="empty-icon">📭</div><div class="empty-text">No expenses found for this period.</div></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- INCOME -->
+    <div id="page-income" class="page">
+      <div class="page-header">
+        <h2>Income</h2>
+        <p>Record your earnings and income sources</p>
+      </div>
+
+      <div class="form-card">
+        <div class="form-card-title">Add New Income</div>
+        <div class="form-row">
+          <div class="form-group"><label>Amount (₹)</label><input id="i-amount" type="number" min="0.01" step="0.01" placeholder="0.00"/></div>
+          <div class="form-group"><label>Date</label><input id="i-date" type="date"/></div>
+        </div>
+        <div class="form-group"><label>Note</label><input id="i-note" type="text" placeholder="e.g. Monthly salary, Freelance project..."/></div>
+        <button class="add-btn" onclick="addIncome()">Add Income</button>
+      </div>
+
+      <div class="filter-row">
+        <label>Filter by</label>
+        <select id="inc-month">
+          <option value="01">January</option><option value="02">February</option>
+          <option value="03">March</option><option value="04">April</option>
+          <option value="05">May</option><option value="06">June</option>
+          <option value="07">July</option><option value="08">August</option>
+          <option value="09">September</option><option value="10">October</option>
+          <option value="11">November</option><option value="12">December</option>
+        </select>
+        <input id="inc-year" type="number" value="2025" style="width:86px"/>
+        <button class="filter-btn" onclick="loadIncome()">Filter</button>
+      </div>
+
+      <div class="section-lbl">Income Records</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Amount</th><th>Note</th><th></th></tr></thead>
+          <tbody id="inc-tbody">
+            <tr><td colspan="4"><div class="empty-cell"><div class="empty-icon">📭</div><div class="empty-text">No income records found for this period.</div></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div id="page-history" class="page">
+      <div class="page-header">
+        <h2>All Transactions</h2>
+        <p>Complete record of all your income and expenses</p>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Details</th></tr></thead>
+          <tbody id="hist-tbody">
+            <tr><td colspan="4"><div class="empty-cell"><div class="empty-icon">⏳</div><div class="empty-text">Loading transactions...</div></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const now = new Date();
+const curMonth = String(now.getMonth()+1).padStart(2,'0');
+const curYear  = String(now.getFullYear());
+const CAT_COLORS = ['#7c6fff','#34d399','#f87171','#fbbf24','#60a5fa','#f472b6','#a78bfa','#2dd4bf','#fb923c'];
+
+function fmt(n){ return '₹'+parseFloat(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function today(){ return now.toISOString().split('T')[0]; }
+function cap(s){ return s?s.charAt(0).toUpperCase()+s.slice(1):s; }
+
+function toast(msg,type='success'){
+  const t=document.getElementById('toast');
+  t.textContent=(type==='success'?'✓ ':'✕ ')+msg;
+  t.className='toast show '+type;
+  clearTimeout(t._t); t._t=setTimeout(()=>t.className='toast',3000);
+}
+
+async function api(url,opts={}){
+  try{
+    const res=await fetch(url,{headers:{'Content-Type':'application/json'},...opts});
+    const d=await res.json(); d.__s=res.status; return d;
+  }catch(e){ return{error:'Network error — is the server running?',__s:0}; }
+}
+
+/* AUTH */
+function switchTab(tab){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',(i===0)===(tab==='login')));
+  document.getElementById('login-form').style.display   =tab==='login'?'block':'none';
+  document.getElementById('register-form').style.display=tab==='register'?'block':'none';
+}
+
+async function doLogin(){
+  const u=document.getElementById('l-user').value.trim();
+  const p=document.getElementById('l-pass').value.trim();
+  const btn=document.getElementById('login-btn');
+  if(!u||!p){showErr('login-err','Please enter your username and password.');return;}
+  btn.textContent='Signing in…';btn.disabled=true;
+  const r=await api('/api/login',{method:'POST',body:JSON.stringify({username:u,password:p})});
+  btn.textContent='Sign In';btn.disabled=false;
+  if(r.error){showErr('login-err',r.error||'Invalid username or password.');return;}
+  enterApp(r.username);
+}
+
+async function doRegister(){
+  const d={username:document.getElementById('r-user').value.trim(),password:document.getElementById('r-pass').value.trim(),dob:document.getElementById('r-dob').value,start_date:document.getElementById('r-start').value,opening_balance:document.getElementById('r-bal').value||0,note:document.getElementById('r-note').value};
+  if(!d.username||!d.password){showErr('reg-err','Username and password are required.');return;}
+  const r=await api('/api/register',{method:'POST',body:JSON.stringify(d)});
+  if(r.error){showErr('reg-err',r.error);return;}
+  toast('Account created! Please sign in.');
+  switchTab('login');
+}
+
+async function doLogout(){
+  await api('/api/logout',{method:'POST'});
+  document.getElementById('app-screen').style.display='none';
+  document.getElementById('auth-screen').style.display='flex';
+}
+
+function showErr(id,msg){
+  const el=document.getElementById(id);
+  el.textContent='⚠ '+msg;el.style.display='block';el.style.animation='none';
+  void el.offsetWidth;el.style.animation='fadeUp .2s ease';
+  clearTimeout(el._t);el._t=setTimeout(()=>el.style.display='none',5000);
+}
+
+function enterApp(username){
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app-screen').style.display='block';
+  document.getElementById('user-lbl').textContent=cap(username);
+  document.getElementById('user-av').textContent=username.charAt(0).toUpperCase();
+  setDefaultDates();showPage('dashboard');loadDashboard();
+}
+
+function setDefaultDates(){
+  ['dash-month','exp-month','inc-month'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=curMonth;});
+  ['dash-year','exp-year','inc-year'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=curYear;});
+  ['e-date','i-date'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=today();});
+}
+
+/* NAV */
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.querySelectorAll('.nav-btn')[['dashboard','expenses','income','history'].indexOf(name)].classList.add('active');
+  if(name==='expenses')loadExpenses();
+  if(name==='income')loadIncome();
+  if(name==='history')loadHistory();
+}
+
+/* DASHBOARD */
+let pieChart;
+function destroyChart(){if(pieChart){pieChart.destroy();pieChart=null;}}
+
+async function loadDashboard(){
+  const month=document.getElementById('dash-month').value;
+  const year=document.getElementById('dash-year').value;
+  const d=await api(`/api/summary?year=${year}&month=${month}`);
+
+  document.getElementById('d-income').textContent=fmt(d.total_income);
+  document.getElementById('d-expense').textContent=fmt(d.total_expense);
+  const bal=document.getElementById('d-balance');
+  bal.textContent=fmt(d.balance);
+  bal.className='stat-val '+(d.balance>=0?'g':'r');
+
+  destroyChart();
+  const ctx=document.getElementById('pie-chart').getContext('2d');
+  const hasData=(d.total_income>0||d.total_expense>0);
+
+  if(hasData){
+    const saved=Math.max(0,d.balance);
+    const pct=d.total_income>0?Math.round(saved/d.total_income*100):0;
+    document.getElementById('pie-pct').textContent=pct+'%';
+
+    const labels=['Spent','Saved'];
+    const values=[d.total_expense,saved];
+    const colors=['#f87171','#34d399'];
+
+    pieChart=new Chart(ctx,{
+      type:'doughnut',
+      data:{labels,datasets:[{data:values,backgroundColor:colors,borderColor:'#191c28',borderWidth:3,hoverOffset:6}]},
+      options:{cutout:'70%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmt(c.raw)}}}}
+    });
+
+    document.getElementById('pie-legend').innerHTML=labels.map((l,i)=>`
+      <div class="pie-legend-row">
+        <div class="pie-legend-left"><div class="pie-dot" style="background:${colors[i]}"></div><span class="pie-lbl">${l}</span></div>
+        <span class="pie-val" style="color:${colors[i]}">${fmt(values[i])}</span>
+      </div>`).join('');
+  } else {
+    document.getElementById('pie-pct').textContent='—';
+    document.getElementById('pie-legend').innerHTML='<span class="empty-text">No data for this period.</span>';
+  }
+
+  /* Category bars */
+  const catEl=document.getElementById('cat-list');
+  if(!d.categories||!d.categories.length){
+    catEl.innerHTML='<div class="empty-text" style="padding:12px 0">No expense categories yet.</div>';return;
+  }
+  const max=d.categories[0].amount;
+  catEl.innerHTML=d.categories.map((c,i)=>`
+    <div class="cat-row">
+      <div class="cat-name">${cap(c.category)}</div>
+      <div class="cat-bar-bg"><div class="cat-bar-fill" style="width:${Math.round(c.amount/max*100)}%;background:${CAT_COLORS[i%CAT_COLORS.length]}"></div></div>
+      <div class="cat-amt">${fmt(c.amount)}</div>
+    </div>`).join('');
+}
+
+/* EXPENSES */
+async function addExpense(){
+  const data={amount:document.getElementById('e-amount').value,category:document.getElementById('e-cat').value,date:document.getElementById('e-date').value,note:document.getElementById('e-note').value};
+  if(!data.amount||!data.date){toast('Please fill in the amount and date.','error');return;}
+  const r=await api('/api/expenses',{method:'POST',body:JSON.stringify(data)});
+  if(r.error){toast(r.error,'error');return;}
+  toast('Expense added successfully.');
+  document.getElementById('e-amount').value='';document.getElementById('e-note').value='';
+  loadExpenses();
+}
+
+async function loadExpenses(){
+  const month=document.getElementById('exp-month').value;
+  const year=document.getElementById('exp-year').value;
+  const rows=await api(`/api/expenses?year=${year}&month=${month}`);
+  const tbody=document.getElementById('exp-tbody');
+  if(!rows||rows.error||!rows.length){
+    tbody.innerHTML='<tr><td colspan="5"><div class="empty-cell"><div class="empty-icon">📭</div><div class="empty-text">No expenses found for this period.</div></div></td></tr>';return;
+  }
+  tbody.innerHTML=rows.map(r=>`
+    <tr>
+      <td style="color:var(--text2)">${r.date}</td>
+      <td style="color:var(--red);font-weight:600">${fmt(r.amount)}</td>
+      <td><span class="badge badge-p">${cap(r.category)}</span></td>
+      <td style="color:var(--text2)">${r.note||'—'}</td>
+      <td><button class="del-btn" onclick="delExp(${r.id})">Delete</button></td>
+    </tr>`).join('');
+}
+
+async function delExp(id){
+  if(!confirm('Are you sure you want to delete this expense?'))return;
+  await api('/api/expenses/'+id,{method:'DELETE'});
+  toast('Expense deleted.');loadExpenses();
+}
+
+/* INCOME */
+async function addIncome(){
+  const data={amount:document.getElementById('i-amount').value,date:document.getElementById('i-date').value,note:document.getElementById('i-note').value};
+  if(!data.amount||!data.date){toast('Please fill in the amount and date.','error');return;}
+  const r=await api('/api/income',{method:'POST',body:JSON.stringify(data)});
+  if(r.error){toast(r.error,'error');return;}
+  toast('Income added successfully.');
+  document.getElementById('i-amount').value='';document.getElementById('i-note').value='';
+  loadIncome();
+}
+
+async function loadIncome(){
+  const month=document.getElementById('inc-month').value;
+  const year=document.getElementById('inc-year').value;
+  const rows=await api(`/api/income?year=${year}&month=${month}`);
+  const tbody=document.getElementById('inc-tbody');
+  if(!rows||rows.error||!rows.length){
+    tbody.innerHTML='<tr><td colspan="4"><div class="empty-cell"><div class="empty-icon">📭</div><div class="empty-text">No income records found for this period.</div></div></td></tr>';return;
+  }
+  tbody.innerHTML=rows.map(r=>`
+    <tr>
+      <td style="color:var(--text2)">${r.date}</td>
+      <td style="color:var(--green);font-weight:600">${fmt(r.amount)}</td>
+      <td style="color:var(--text2)">${r.note||'—'}</td>
+      <td>${r.note!=='OPENING BALANCE'?`<button class="del-btn" onclick="delInc(${r.id})">Delete</button>`:''}</td>
+    </tr>`).join('');
+}
+
+async function delInc(id){
+  if(!confirm('Are you sure you want to delete this income record?'))return;
+  await api('/api/income/'+id,{method:'DELETE'});
+  toast('Income record deleted.');loadIncome();
+}
+
+/* HISTORY */
+async function loadHistory(){
+  const[expenses,income]=await Promise.all([api('/api/expenses'),api('/api/income')]);
+  const all=[
+    ...(Array.isArray(expenses)?expenses:[]).map(r=>({...r,type:'expense'})),
+    ...(Array.isArray(income)?income:[]).map(r=>({...r,type:'income',category:r.note}))
+  ].sort((a,b)=>b.date.localeCompare(a.date));
+  const tbody=document.getElementById('hist-tbody');
+  if(!all.length){
+    tbody.innerHTML='<tr><td colspan="4"><div class="empty-cell"><div class="empty-icon">📭</div><div class="empty-text">No transactions recorded yet.</div></div></td></tr>';return;
+  }
+  tbody.innerHTML=all.map(r=>`
+    <tr>
+      <td style="color:var(--text2)">${r.date}</td>
+      <td><span class="badge ${r.type==='income'?'badge-g':'badge-r'}">${cap(r.type)}</span></td>
+      <td style="color:${r.type==='income'?'var(--green)':'var(--red)'};font-weight:600">${fmt(r.amount)}</td>
+      <td style="color:var(--text2)">${r.category||r.note||'—'}</td>
+    </tr>`).join('');
+}
+
+/* INIT */
+(async()=>{
+  const r=await api('/api/me');
+  if(r.logged_in)enterApp(r.username);
+})();
+</script>
+</body>
+</html>
