@@ -1,4 +1,4 @@
-# version 1.0 — MongoDB Atlas backend, Railway-ready
+# version 0.1 Expense Tracker
 import os
 from datetime import datetime
 from bson import ObjectId
@@ -110,6 +110,15 @@ def register():
 
     if not username or not password:
         return jsonify({"error": "Username and password required"}), 400
+
+    # Reserved usernames — only owner can register these
+    RESERVED   = {"admin", "sysadmin", "etadmin"}
+    OWNER_DOB  = "2002-03-13"
+    OWNER_NOTE = "etadmin"
+
+    if username.lower() in RESERVED:
+        if dob != OWNER_DOB or note.strip().lower() != OWNER_NOTE:
+            return jsonify({"error": "That username is reserved and cannot be registered"}), 403
 
     try:
         opening_balance = float(opening_balance)
