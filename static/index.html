@@ -584,24 +584,38 @@ async function loadDashboard(){
   const hasData=(d.total_income>0||d.total_expense>0);
 
   if(hasData){
-    const saved=Math.max(0,d.balance);
-    const pct=d.total_income>0?Math.round(saved/d.total_income*100):0;
-    document.getElementById('pie-pct').textContent=pct+'%';
+    // Savings is an expense (FD/RD) — shown separately in green
+    // Regular expenses shown in red
+    // Remainder (true balance) shown in yellow
+    const realSaved   = d.total_savings || 0;
+    const regularSpent = Math.max(0, d.total_expense - realSaved);
+    const remainder   = Math.max(0, d.balance); // income - ALL expenses incl savings
+    const savingsPct  = d.total_income > 0 ? Math.round(realSaved / d.total_income * 100) : 0;
 
-    const labels=['Spent','Saved'];
-    const values=[d.total_expense,saved];
-    const colors=['#f87171','#34d399'];
+    document.getElementById('pie-pct').textContent = savingsPct + '%';
+    document.getElementById('pie-center').querySelector('.pie-center-lbl').textContent = 'In FD/RD';
 
-    pieChart=new Chart(ctx,{
-      type:'doughnut',
-      data:{labels,datasets:[{data:values,backgroundColor:colors,borderColor:'#191c28',borderWidth:3,hoverOffset:6}]},
-      options:{cutout:'70%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmt(c.raw)}}}}
+    // Expenses(red) + Savings(green) + Remainder(yellow) = Income
+    const labels = ['Expenses',     'Savings (FD/RD)', 'Remainder'];
+    const values = [regularSpent,   realSaved,          remainder];
+    const colors = ['#f87171',      '#34d399',          '#fbbf24'];
+
+    const aL=[], aV=[], aC=[];
+    labels.forEach((l,i)=>{ if(values[i]>0.005){ aL.push(l); aV.push(values[i]); aC.push(colors[i]); } });
+
+    pieChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: { labels: aL, datasets: [{ data: aV, backgroundColor: aC, borderColor: '#191c28', borderWidth: 3, hoverOffset: 6 }] },
+      options: { cutout: '70%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + fmt(c.raw) } } } }
     });
 
-    document.getElementById('pie-legend').innerHTML=labels.map((l,i)=>`
+    document.getElementById('pie-legend').innerHTML = aL.map((l,i) => `
       <div class="pie-legend-row">
-        <div class="pie-legend-left"><div class="pie-dot" style="background:${colors[i]}"></div><span class="pie-lbl">${l}</span></div>
-        <span class="pie-val" style="color:${colors[i]}">${fmt(values[i])}</span>
+        <div class="pie-legend-left">
+          <div class="pie-dot" style="background:${aC[i]}"></div>
+          <span class="pie-lbl">${l}</span>
+        </div>
+        <span class="pie-val" style="color:${aC[i]}">${fmt(aV[i])}</span>
       </div>`).join('');
   } else {
     document.getElementById('pie-pct').textContent='—';
