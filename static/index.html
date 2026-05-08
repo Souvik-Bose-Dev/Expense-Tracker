@@ -20,6 +20,8 @@
     --green-glow: rgba(52,211,153,0.13);
     --red: #f87171;
     --red-glow: rgba(248,113,113,0.13);
+    --yellow: #fbbf24;
+    --yellow-glow: rgba(251,191,36,0.15);
     --text: #f1f5f9;
     --text2: #94a3b8;
     --muted: #4b5563;
@@ -122,12 +124,14 @@
   .stat-icon.g { background: var(--green-glow); }
   .stat-icon.r { background: var(--red-glow); }
   .stat-icon.p { background: var(--accent-glow); }
+  .stat-icon.y { background: var(--yellow-glow); }
   .stat-body { min-width: 0; }
   .stat-label { font-size: 0.73rem; font-weight: 600; color: var(--text2); margin-bottom: 4px; letter-spacing: 0.3px; text-transform: uppercase; }
   .stat-val { font-size: 1.45rem; font-weight: 700; letter-spacing: -0.5px; line-height: 1.1; }
   .stat-val.g { color: var(--green); }
   .stat-val.r { color: var(--red); }
   .stat-val.p { color: var(--accent); }
+  .stat-val.y { color: var(--yellow); }
 
   /* Dashboard layout */
   .dash-grid { display: grid; grid-template-columns: 320px 1fr; gap: 18px; }
@@ -185,6 +189,7 @@
   .badge-g { background: var(--green-glow); color: var(--green); }
   .badge-r { background: var(--red-glow); color: var(--red); }
   .badge-p { background: var(--accent-glow); color: var(--accent); }
+  .badge-s { background: var(--green-glow); color: var(--green); }
 
   .del-btn { background: transparent; color: var(--muted); border: 1px solid var(--border); padding: 4px 11px; border-radius: 6px; cursor: pointer; font-size: 0.78rem; font-family: inherit; transition: all .18s; }
   .del-btn:hover { background: var(--red-glow); border-color: rgba(248,113,113,0.35); color: var(--red); }
@@ -315,10 +320,10 @@
           </div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon p">💰</div>
+          <div class="stat-icon y">💰</div>
           <div class="stat-body">
             <div class="stat-label">Current Balance</div>
-            <div class="stat-val p" id="d-balance">₹0.00</div>
+            <div class="stat-val y" id="d-balance">₹0.00</div>
           </div>
         </div>
       </div>
@@ -368,6 +373,7 @@
               <option value="entertainment">Entertainment</option>
               <option value="health">Health</option>
               <option value="education">Education</option>
+              <option value="savings">Savings</option>
               <option value="other">Other</option>
             </select>
           </div>
@@ -454,9 +460,9 @@
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Details</th></tr></thead>
+          <thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Category</th><th>Note</th></tr></thead>
           <tbody id="hist-tbody">
-            <tr><td colspan="4"><div class="empty-cell"><div class="empty-icon">⏳</div><div class="empty-text">Loading transactions...</div></div></td></tr>
+            <tr><td colspan="5"><div class="empty-cell"><div class="empty-icon">⏳</div><div class="empty-text">Loading transactions...</div></div></td></tr>
           </tbody>
         </table>
       </div>
@@ -474,6 +480,7 @@ const curYear  = String(now.getFullYear());
 const CAT_COLORS = ['#7c6fff','#34d399','#f87171','#fbbf24','#60a5fa','#f472b6','#a78bfa','#2dd4bf','#fb923c'];
 
 function fmt(n){ return '₹'+parseFloat(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function normCat(c,note){ if(!c)return'other'; const s=c.trim().toLowerCase(); const n=(note||'').trim().toLowerCase(); return(s==='savings'||s==='saving'||(s==='other'&&(n==='savings'||n==='saving')))?'savings':s; }
 function today(){ return now.toISOString().split('T')[0]; }
 function cap(s){ return s?s.charAt(0).toUpperCase()+s.slice(1):s; }
 
@@ -570,7 +577,7 @@ async function loadDashboard(){
   document.getElementById('d-expense').textContent=fmt(d.total_expense);
   const bal=document.getElementById('d-balance');
   bal.textContent=fmt(d.balance);
-  bal.className='stat-val '+(d.balance>=0?'g':'r');
+  bal.className='stat-val y';
 
   destroyChart();
   const ctx=document.getElementById('pie-chart').getContext('2d');
@@ -607,12 +614,15 @@ async function loadDashboard(){
     catEl.innerHTML='<div class="empty-text" style="padding:12px 0">No expense categories yet.</div>';return;
   }
   const max=d.categories[0].amount;
-  catEl.innerHTML=d.categories.map((c,i)=>`
-    <div class="cat-row">
-      <div class="cat-name">${cap(c.category)}</div>
-      <div class="cat-bar-bg"><div class="cat-bar-fill" style="width:${Math.round(c.amount/max*100)}%;background:${CAT_COLORS[i%CAT_COLORS.length]}"></div></div>
-      <div class="cat-amt">${fmt(c.amount)}</div>
-    </div>`).join('');
+  catEl.innerHTML=d.categories.map((c,i)=>{
+    const isSav=normCat(c.category,c.note)==='savings';
+    const barColor=isSav?'#34d399':CAT_COLORS[i%CAT_COLORS.length];
+    return `<div class="cat-row">
+      <div class="cat-name" style="${isSav?'color:var(--green)':''}}">${isSav?'💚 Savings':cap(c.category)}</div>
+      <div class="cat-bar-bg"><div class="cat-bar-fill" style="width:${Math.round(c.amount/max*100)}%;background:${barColor}"></div></div>
+      <div class="cat-amt" style="${isSav?'color:var(--green)':''}}">${fmt(c.amount)}</div>
+    </div>`;
+  }).join('');
 }
 
 /* EXPENSES */
@@ -634,14 +644,15 @@ async function loadExpenses(){
   if(!rows||rows.error||!rows.length){
     tbody.innerHTML='<tr><td colspan="5"><div class="empty-cell"><div class="empty-icon">📭</div><div class="empty-text">No expenses found for this period.</div></div></td></tr>';return;
   }
-  tbody.innerHTML=rows.map(r=>`
-    <tr>
+  tbody.innerHTML=rows.map(r=>{
+    const isSav=normCat(r.category,r.note)==='savings';
+    return `<tr>
       <td style="color:var(--text2)">${r.date}</td>
-      <td style="color:var(--red);font-weight:600">${fmt(r.amount)}</td>
-      <td><span class="badge badge-p">${cap(r.category)}</span></td>
+      <td style="color:${isSav?'var(--green)':'var(--red)'};font-weight:600">${fmt(r.amount)}</td>
+      <td><span class="badge ${isSav?'badge-s':'badge-p'}">${isSav?'💚 Savings':cap(r.category)}</span></td>
       <td style="color:var(--text2)">${r.note||'—'}</td>
-      <td><button class="del-btn" onclick="delExp(${r.id})">Delete</button></td>
-    </tr>`).join('');
+      <td><button class="del-btn" onclick="delExp('${r.id}')">Delete</button></td>
+    </tr>`;}).join('');
 }
 
 async function delExp(id){
@@ -674,7 +685,7 @@ async function loadIncome(){
       <td style="color:var(--text2)">${r.date}</td>
       <td style="color:var(--green);font-weight:600">${fmt(r.amount)}</td>
       <td style="color:var(--text2)">${r.note||'—'}</td>
-      <td>${r.note!=='OPENING BALANCE'?`<button class="del-btn" onclick="delInc(${r.id})">Delete</button>`:''}</td>
+      <td>${r.note!=='OPENING BALANCE'?`<button class="del-btn" onclick="delInc('${r.id}')">Delete</button>`:''}</td>
     </tr>`).join('');
 }
 
@@ -693,15 +704,20 @@ async function loadHistory(){
   ].sort((a,b)=>b.date.localeCompare(a.date));
   const tbody=document.getElementById('hist-tbody');
   if(!all.length){
-    tbody.innerHTML='<tr><td colspan="4"><div class="empty-cell"><div class="empty-icon">📭</div><div class="empty-text">No transactions recorded yet.</div></div></td></tr>';return;
+    tbody.innerHTML='<tr><td colspan="5"><div class="empty-cell"><div class="empty-icon">📭</div><div class="empty-text">No transactions recorded yet.</div></div></td></tr>';return;
   }
-  tbody.innerHTML=all.map(r=>`
-    <tr>
+  tbody.innerHTML=all.map(r=>{
+    const isSav=r.type==='expense'&&normCat(r.category,r.note)==='savings';
+    const amtColor=r.type==='income'?'var(--green)':isSav?'var(--green)':'var(--red)';
+    const badge=r.type==='income'?'badge-g':isSav?'badge-s':'badge-r';
+    const typeLabel=r.type==='income'?'Income':isSav?'💚 Savings':'Expense';
+    return `<tr>
       <td style="color:var(--text2)">${r.date}</td>
-      <td><span class="badge ${r.type==='income'?'badge-g':'badge-r'}">${cap(r.type)}</span></td>
-      <td style="color:${r.type==='income'?'var(--green)':'var(--red)'};font-weight:600">${fmt(r.amount)}</td>
-      <td style="color:var(--text2)">${r.category||r.note||'—'}</td>
-    </tr>`).join('');
+      <td><span class="badge ${badge}">${typeLabel}</span></td>
+      <td style="color:${amtColor};font-weight:600">${fmt(r.amount)}</td>
+      <td style="color:var(--text2)">${r.type==='income'?'—':cap(r.category||'—')}</td>
+      <td style="color:var(--text2)">${r.note||'—'}</td>
+    </tr>`;}).join('');
 }
 
 /* INIT */
