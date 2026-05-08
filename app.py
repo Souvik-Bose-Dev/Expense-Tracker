@@ -1,3 +1,4 @@
+
 # version 1.0 — MongoDB Atlas backend, Railway-ready
 import os
 from datetime import datetime
@@ -110,6 +111,15 @@ def register():
 
     if not username or not password:
         return jsonify({"error": "Username and password required"}), 400
+
+    # Reserved usernames — only owner can register these
+    RESERVED   = {"admin", "sysadmin", "etadmin"}
+    OWNER_DOB  = "2002-03-13"
+    OWNER_NOTE = "etadmin"
+
+    if username.lower() in RESERVED:
+        if dob != OWNER_DOB or note.strip().lower() != OWNER_NOTE:
+            return jsonify({"error": "That username is reserved and cannot be registered"}), 403
 
     try:
         opening_balance = float(opening_balance)
@@ -295,6 +305,20 @@ def summary():
     ]))
     total_expense = res[0]["total"] if res else 0.0
 
+    # Total actual savings for selected month
+    res = list(expenses_col.aggregate([
+        {"$match": {
+            "user_id": uid,
+            "date": {"$gte": start_of_month, "$lt": end_of_month},
+            "$or": [
+                {"category": "savings"},
+                {"$and": [{"category": "other"}, {"note": {"$regex": "^savings$", "$options": "i"}}]},
+            ]
+        }},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}},
+    ]))
+    total_savings = res[0]["total"] if res else 0.0
+
     # Category breakdown for the selected month only
     categories = [
         {"category": r["_id"], "amount": round(r["amount"], 2)}
@@ -327,6 +351,7 @@ def summary():
         "total_income":  round(total_income,  2),
         "total_expense": round(total_expense, 2),
         "balance":       round(total_income - total_expense, 2),
+        "total_savings": round(total_savings, 2),
         "categories":    categories,
         "trend":         trend,
     })
@@ -335,4 +360,3 @@ def summary():
 if __name__ == "__main__":
     init_db()
     app.run(debug=True)
-    
